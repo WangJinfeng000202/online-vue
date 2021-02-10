@@ -26,24 +26,51 @@ router.beforeEach(async(to, from, next) => {
       next({ path: '/' })
       NProgress.done()
     } else {
-      const hasGetUserInfo = store.getters.name
-      if (hasGetUserInfo) {
+      const hasRoles = store.getters.roles && store.getters.roles.length > 0
+      if (hasRoles) {
         next()
       } else {
         try {
           // get user info
-          await store.dispatch('user/getInfo')
+          // note: roles must be a object array! such as: ['admin'] or ,['developer','editor']
+          const { roles } = await store.dispatch('GetInfo')
 
-          next()
+          // generate accessible routes map based on roles
+          const accessRoutes = await store.dispatch('permission/generateRoutes', roles)
+
+          // dynamically add accessible routes
+
+          router.addRoutes(accessRoutes)
+
+          next({ ...to, replace: true })
         } catch (error) {
           // remove token and go to login page to re-login
-          await store.dispatch('user/resetToken')
+          await store.dispatch('FedLogOut')
           Message.error(error || 'Has Error')
           next(`/login?redirect=${to.path}`)
           NProgress.done()
         }
       }
     }
+      //   const hasGetUserInfo = store.getters.name
+    //
+    //   if (hasGetUserInfo) {
+    //     next()
+    //   } else {
+    //     try {
+    //       // get user info
+    //       await store.dispatch('user/getInfo')
+    //
+    //       next()
+    //     } catch (error) {
+    //       // remove token and go to login page to re-login
+    //       await store.dispatch('user/resetToken')
+    //       Message.error(error || 'Has Error')
+    //       next(`/login?redirect=${to.path}`)
+    //       NProgress.done()
+    //     }
+    //   }
+    // }
   } else {
     /* has no token*/
 
